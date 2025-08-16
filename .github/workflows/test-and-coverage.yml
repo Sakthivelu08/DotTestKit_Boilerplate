@@ -63,15 +63,18 @@ jobs:
       run: dotnet tool install -g dotnet-reportgenerator-globaltool
 
     - name: Add ReportGenerator to PATH
-      run: echo "$HOME/.dotnet/tools" | Out-File -Append -Encoding ascii $env:GITHUB_PATH
+      run: echo "${{ runner.home }}/.dotnet/tools" >> $GITHUB_PATH
 
     - name: Generate HTML report
+      working-directory: API/DotTestKit.API.Tests
       run: |
-        $coverageFile = Get-ChildItem -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 1
-        reportgenerator -reports:"$coverageFile" -targetdir:"CoverageReport" -reporttypes:Html
+        $coverageFile = Get-ChildItem -Path "TestResults" -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 1
+        if (-not $coverageFile) { throw "Coverage file not found!" }
+        reportgenerator -reports:$coverageFile.FullName -targetdir:"CoverageReport" -reporttypes:Html
 
     - name: Upload API Coverage Report
       uses: actions/upload-artifact@v4
       with:
         name: api-code-coverage-report
         path: API/DotTestKit.API.Tests/CoverageReport
+
