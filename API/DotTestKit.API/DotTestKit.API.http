@@ -1,0 +1,6 @@
+@DotTestKit.API_HostAddress = http://localhost:5186
+
+GET {{DotTestKit.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

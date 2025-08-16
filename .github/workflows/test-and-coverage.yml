@@ -1,4 +1,4 @@
-name: Run Angular Tests and Generate Coverage Report
+name: Run Angular and API Tests with Coverage
 
 on:
   push:
@@ -7,12 +7,15 @@ on:
     branches: [ "**" ] 
 
 jobs:
-  angular-test-and-coverage:
+  test-and-coverage:
     runs-on: windows-latest
 
     steps:
+    # Checkout repository
     - name: Checkout code
       uses: actions/checkout@v3
+      
+    # Angular Frontend Steps
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -36,3 +39,34 @@ jobs:
       with:
         name: angular-code-coverage-report
         path: Client/coverage/client
+        
+    # .NET API Backend Steps
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore .NET dependencies
+      working-directory: API/DotTestKit.API
+      run: dotnet restore
+
+    - name: Build API Project
+      working-directory: API/DotTestKit.API
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run API Tests with Coverage
+      working-directory: API/DotTestKit.API.Tests
+      run: dotnet test --no-build --collect:"XPlat Code Coverage" --results-directory TestResults
+
+    - name: Generate Coverage Report
+      working-directory: API/DotTestKit.API.Tests
+      run: |
+        $coverageFile = Get-ChildItem -Path "TestResults" -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 1
+        reportgenerator -reports:$coverageFile.FullName -targetdir:"CoverageReport" -reporttypes:Html
+
+    - name: Upload API Coverage Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: api-code-coverage-report
+        path: API/DotTestKit.API.Tests/CoverageReport
