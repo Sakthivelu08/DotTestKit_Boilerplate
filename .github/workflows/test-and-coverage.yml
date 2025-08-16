@@ -59,11 +59,17 @@ jobs:
       working-directory: API/DotTestKit.API.Tests
       run: dotnet test --no-build --collect:"XPlat Code Coverage" --results-directory TestResults
 
+    - name: Install ReportGenerator
+      run: dotnet tool install --global dotnet-reportgenerator-globaltool
+
+    - name: Add .NET tools to PATH
+      run: echo "::add-path::${HOME}/.dotnet/tools"
+
     - name: Generate Coverage Report
       working-directory: API/DotTestKit.API.Tests
       run: |
-        $coverageFile = Get-ChildItem -Path "TestResults" -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 1
-        reportgenerator -reports:$coverageFile.FullName -targetdir:"CoverageReport" -reporttypes:Html
+            $coverageFile = Get-ChildItem -Path "TestResults" -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 1
+            reportgenerator -reports:$coverageFile.FullName -targetdir:"CoverageReport" -reporttypes:Html
 
     - name: Upload API Coverage Report
       uses: actions/upload-artifact@v4
