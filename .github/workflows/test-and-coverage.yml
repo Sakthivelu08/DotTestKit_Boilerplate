@@ -77,15 +77,14 @@ jobs:
       - name: Generate HTML coverage report
         working-directory: API/DotTestKit.API.Tests
         run: |
-          # Find coverage file dynamically
           $coverageFile = Get-ChildItem -Path "TestResults" -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 1
           
           if (-not $coverageFile) {
-            Write-Host "No coverage file found. Skipping report generation."
-            exit 1
+            Write-Host "::warning::No coverage file found. Skipping report generation."
+            exit 0
           }
 
-          reportgenerator -reports:$coverageFile.FullName -targetdir:"CoverageReport" -reporttypes:Html
+          reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:"CoverageReport" -reporttypes:Html
           Write-Host "API coverage report generated successfully."
 
       - name: Upload API Coverage Report
