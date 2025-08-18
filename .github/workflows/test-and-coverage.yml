@@ -54,8 +54,19 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run API Tests with Coverage
-        working-directory: API
-        run: dotnet test DotTestKit.API.Tests/DotTestKit.API.Tests.csproj --no-build --collect:"XPlat Code Coverage" --results-directory DotTestKit.API.Tests/TestResults
+        working-directory: API/DotTestKit.API.Tests
+        run: |
+          dotnet test DotTestKit.API.Tests.csproj `
+            --no-build `
+            --collect:"XPlat Code Coverage" `
+            --logger "trx;LogFileName=test_results.trx" `
+            --results-directory TestResults
+
+      - name: Debug TestResults (list files)
+        working-directory: API/DotTestKit.API.Tests
+        run: |
+          echo "Listing TestResults folder after test run..."
+          Get-ChildItem -Path "TestResults" -Recurse -Force
 
       - name: Install ReportGenerator
         run: dotnet tool install -g dotnet-reportgenerator-globaltool
@@ -66,24 +77,14 @@ jobs:
       - name: Generate HTML coverage report
         working-directory: API/DotTestKit.API.Tests
         run: |
-          # Check if TestResults folder exists and list contents
-          if (Test-Path -Path "TestResults") {
-            Write-Host "Listing TestResults folder:"
-            Get-ChildItem -Path "TestResults" -Recurse
-          } else {
-            Write-Host "TestResults folder does not exist. Skipping coverage report generation."
-            exit 0
-          }
-
           # Find coverage file dynamically
           $coverageFile = Get-ChildItem -Path "TestResults" -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 1
           
           if (-not $coverageFile) {
             Write-Host "No coverage file found. Skipping report generation."
-            exit 0
+            exit 1
           }
 
-          # Generate HTML report
           reportgenerator -reports:$coverageFile.FullName -targetdir:"CoverageReport" -reporttypes:Html
           Write-Host "API coverage report generated successfully."
 
