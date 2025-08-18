@@ -1,4 +1,4 @@
-name: Run Angular Tests and Generate Coverage Report
+name: Run Angular and API Tests with Coverage
 
 on:
   push:
@@ -7,32 +7,88 @@ on:
     branches: [ "**" ] 
 
 jobs:
-  angular-test-and-coverage:
+  test-and-coverage:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      # ===================== Checkout =====================
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      # ===================== Angular Frontend =====================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: Install Angular dependencies
-      working-directory: Client
-      run: npm ci
+      - name: Install Angular dependencies
+        working-directory: Client
+        run: npm ci
 
-    - name: Run Angular tests with coverage
-      working-directory: Client
-      env:
-        NODE_OPTIONS: --openssl-legacy-provider
-      run: |
-        npx ng test --browsers=ChromeHeadless --watch=false --code-coverage
-        echo "Angular tests completed."
+      - name: Run Angular tests with coverage
+        working-directory: Client
+        env:
+          NODE_OPTIONS: --openssl-legacy-provider
+        run: |
+          npx ng test --browsers=ChromeHeadless --watch=false --code-coverage
+          echo "Angular tests completed."
 
-    - name: Upload Angular Coverage Report
-      uses: actions/upload-artifact@v4
-      with:
-        name: angular-code-coverage-report
-        path: Client/coverage/client
+      - name: Upload Angular Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: angular-code-coverage-report
+          path: Client/coverage/client
+
+      # ===================== .NET API Backend =====================
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore .NET dependencies
+        working-directory: API/DotTestKit.API
+        run: dotnet restore
+
+      - name: Build API Project
+        working-directory: API/DotTestKit.API
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run API Tests with Coverage
+        working-directory: API
+        run: dotnet test DotTestKit.API.Tests/DotTestKit.API.Tests.csproj --no-build --collect:"XPlat Code Coverage" --results-directory DotTestKit.API.Tests/TestResults
+
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+      - name: Add ReportGenerator to PATH
+        run: echo "${{ runner.home }}/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: Generate HTML coverage report
+        working-directory: API/DotTestKit.API.Tests
+        run: |
+          # Check if TestResults folder exists and list contents
+          if (Test-Path -Path "TestResults") {
+            Write-Host "Listing TestResults folder:"
+            Get-ChildItem -Path "TestResults" -Recurse
+          } else {
+            Write-Host "TestResults folder does not exist. Skipping coverage report generation."
+            exit 0
+          }
+
+          # Find coverage file dynamically
+          $coverageFile = Get-ChildItem -Path "TestResults" -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 1
+          
+          if (-not $coverageFile) {
+            Write-Host "No coverage file found. Skipping report generation."
+            exit 0
+          }
+
+          # Generate HTML report
+          reportgenerator -reports:$coverageFile.FullName -targetdir:"CoverageReport" -reporttypes:Html
+          Write-Host "API coverage report generated successfully."
+
+      - name: Upload API Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-code-coverage-report
+          path: API/DotTestKit.API.Tests/CoverageReport
