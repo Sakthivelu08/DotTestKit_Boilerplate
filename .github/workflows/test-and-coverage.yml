@@ -55,11 +55,7 @@ jobs:
 
       - name: Run API Tests with Coverage
         working-directory: API
-        run: |
-          dotnet test DotTestKit.API.Tests/DotTestKit.API.Tests.csproj \
-            --no-build \
-            --collect:"XPlat Code Coverage" \
-            --results-directory DotTestKit.API.Tests/TestResults
+        run: dotnet test DotTestKit.API.Tests/DotTestKit.API.Tests.csproj --no-build --collect:"XPlat Code Coverage" --results-directory DotTestKit.API.Tests/TestResults
 
       - name: Install ReportGenerator
         run: dotnet tool install -g dotnet-reportgenerator-globaltool
