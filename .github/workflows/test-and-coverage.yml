@@ -64,23 +64,24 @@ jobs:
         run: echo "${{ runner.home }}/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Generate HTML coverage report
+        shell: pwsh
         working-directory: API/DotTestKit.API.Tests
         run: |
-          # Check if TestResults folder exists and list contents
-          if (Test-Path -Path "TestResults") {
-            Write-Host "Listing TestResults folder:"
-            Get-ChildItem -Path "TestResults" -Recurse
-          } else {
-            Write-Host "TestResults folder does not exist. Skipping coverage report generation."
-            exit 0
+          # Ensure TestResults folder exists
+          if (-not (Test-Path -Path "TestResults")) {
+            Write-Host "TestResults folder does not exist. Failing pipeline."
+            exit 1
           }
+
+          Write-Host "Listing TestResults folder:"
+          Get-ChildItem -Path "TestResults" -Recurse
 
           # Find coverage file dynamically
           $coverageFile = Get-ChildItem -Path "TestResults" -Recurse -Filter "coverage.cobertura.xml" | Select-Object -First 1
           
           if (-not $coverageFile) {
-            Write-Host "No coverage file found. Skipping report generation."
-            exit 0
+            Write-Host "No coverage.cobertura.xml file found. Failing pipeline."
+            exit 1
           }
 
           # Generate HTML report
@@ -92,3 +93,4 @@ jobs:
         with:
           name: api-code-coverage-report
           path: API/DotTestKit.API.Tests/CoverageReport
+
